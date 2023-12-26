@@ -1,46 +1,43 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
+	"context"
+	"os"
+
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	"math/rand"
+	ginadapter "github.com/awslabs/aws-lambda-go-api-proxy/gin"
+	"github.com/gin-gonic/gin"
 )
 
-/*
-	- Prayers
-	- Reflexions
-	- Verses
-	- Devotional
-*/
+var ginLambda *ginadapter.GinLambdaV2
+var ginEngine *gin.Engine
 
-var Prayers []string
+func init() {
+	r := gin.Default()
 
-type PrayerResponse struct {
-	Message string
+	r.GET("/first", func(c *gin.Context) {
+		c.JSON(200, "hello world from the first endpoint!")
+	})
+
+	r.GET("/second", func(c *gin.Context) {
+		c.JSON(200, "hello world from the second endpoint!")
+	})
+
+	ginEngine = r
 }
 
 func main() {
-	Prayers = append(Prayers,
-		"Señor, gracias por darme el mayor regalo imaginable: la salvación a través de Jesucristo. Ayúdame a cultivar un corazón generoso y a ayudar a los neceistados. Abre mis ojos para ver oportunidades de compartir tu amor con aquellos que no te conocen. En el nombre de Jesús, Amen",
-	)
+	lambdaTaskRoot := os.Getenv("LAMBDA_TASK_ROOT")
+	if lambdaTaskRoot != "" {
+		// If LAMBDA_TASK_ROOT is set, we are running inside Lambda.
+		ginLambda = ginadapter.NewV2(ginEngine)
 
-	lambda.Start(handler)
-}
-
-func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	body := PrayerResponse{
-		Message: fmt.Sprintf(Prayers[rand.Intn(len(Prayers))]),
+		lambda.Start(func(ctx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
+			return ginLambda.ProxyWithContext(ctx, req)
+		})
+	} else {
+		// Else, we are running in a local or other environment.
+		ginEngine.Run()
 	}
-
-	jsonBody, _ := json.Marshal(body)
-
-	response := events.APIGatewayProxyResponse{
-		StatusCode: 200,
-		Body:       string(jsonBody),
-		Headers:    map[string]string{"Content-Type": "application/json"},
-	}
-
-	return response, nil
 }
