@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"healthy-mind/src/data"
 	"os"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -10,19 +11,21 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+/*
+	- Reflexions
+	- Verses
+	- Devotional
+*/
+
 var ginLambda *ginadapter.GinLambdaV2
 var ginEngine *gin.Engine
 
 func init() {
 	r := gin.Default()
 
-	r.GET("/first", func(c *gin.Context) {
-		c.JSON(200, "hello world from the first endpoint!")
-	})
+	r.GET("/prayer", data.GetPrayer())
 
-	r.GET("/second", func(c *gin.Context) {
-		c.JSON(200, "hello world from the second endpoint!")
-	})
+	r.GET("/reflection", data.GetReflection())
 
 	ginEngine = r
 }
